@@ -24,11 +24,13 @@ import (
 // DoStuff Does stuff :)
 func DoStuff(method string, url string, body io.Reader, key string) ([]byte, int) {
 
+	// New request
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		fmt.Println(err)
 	}
 
+	// Add header with 'key' authorization
 	req.Header.Add("authorization", key)
 
 	res, err := http.DefaultClient.Do(req)
@@ -38,12 +40,12 @@ func DoStuff(method string, url string, body io.Reader, key string) ([]byte, int
 
 	defer res.Body.Close()
 
-	payload, err := ioutil.ReadAll(res.Body)
+	imgBody, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	return payload, res.StatusCode
+	return imgBody, res.StatusCode
 }
 
 // HandleImage handles image requests
@@ -117,10 +119,54 @@ func HandleImage(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func HandleComment(w http.ResponseWriter, r *http.Request){
+	//parts := strings.Split(r.URL.Path, "/")
+
+	switch r.Method {
+
+	case "POST":
+
+		http.Error(w, "Not yet implemented", http.StatusBadRequest)
+		/*
+		// URL for POSTing comment
+		url := "https://api.imgur.com/3/comment"
+
+		// Authorization key
+		token := "Bearer " + os.Getenv("TOKEN")
+
+		// Payload
+		// TODO : Fix this problem
+		payload := strings.NewReader("------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"image_id\"\r\n\r\nnP0uKKO\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"comment\"\r\n\r\nI'm a giraffe!\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--")
+
+		// Get body and http status code
+		body, status := DoStuff(parts[2], url, payload, token)
+
+		// If status is not OK
+		if status != 200 {
+			http.Error(w, "Could not post comment", status)
+		} else {
+			fmt.Fprintln(w, string(body))
+		}
+		*/
+
+	case "GET":
+		http.Error(w, "Not yet implemented", http.StatusNotImplemented)
+
+	case "DELETE":
+		http.Error(w, "Not yet implemented", http.StatusNotImplemented)
+
+	default:
+		http.Error(w, "Method has to be: POST, GET or DELETE", http.StatusBadRequest)
+	}
+}
+
 func main() {
 
 	// Handle Images
 	http.HandleFunc("/image/", HandleImage)
+
+	// Handle Comments
+	http.HandleFunc("/comment/", HandleComment)
 
 	// Listen and serve for address "localhost:8080"
 	http.ListenAndServe("localhost:8080", nil)
