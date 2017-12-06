@@ -1,11 +1,10 @@
 // Author: Brede F. Klausen
 
 // TODO : Comment code
+// TODO : Fix info text
 // TODO : Make code more pretty and add more error handling
-// TODO : Figure out how to add title and stuff when POSTing
 // TODO : Maybe set up db and store som stuff there (like imageDeleteHash)
 // TODO : Make more helpingFunctions
-// TODO : Change it so I have to use postman to post and delete
 // TODO : Always run fmt, vet and lint before pushing!
 // TODO : MAke more todos
 
@@ -16,6 +15,11 @@ import (
 )
 
 func main() {
+
+	// Check if there is environment variables that's not empty
+	if err, _, _ := CheckEnv(); err != 0 {
+		return
+	}
 
 	// Handle info
 	http.HandleFunc("/", HandleInfo)

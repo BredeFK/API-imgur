@@ -1,47 +1,47 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 )
 
 // HandleImage handles all image requests
 func HandleImage(w http.ResponseWriter, r *http.Request) {
 
+	// Get Access token and client-ID
+	_, token, client := CheckEnv()
+
 	// Split the url by the '/'
 	parts := strings.Split(r.URL.Path, "/")
 
-	// Get length of url after root/ - 1
-	length := len(parts) - 1
-
 	// Make switch on method
-	switch parts[2] {
+	switch r.Method {
 
 	// If the method is POST
 	case "POST":
 
 		// Handle POST
-		ImagePOST(parts[2], w)
+		ImagePOST(token, r, w)
 
 	// If the method is GET
 	case "GET":
 
 		// Handle GET
-		ImageGET(parts[2], parts[3], length, w)
+		ImageGET(parts, client, r, w)
 
 	// If the method is DELETE
 	case "DELETE":
 
 		// Handle DELETE
-		ImageDELETE(parts[2], parts[3], length, w)
+		ImageDELETE(parts, token, r, w)
 
 	// If the method is neither of the above
 	default:
 
 		// Give info about how to navigate images
-		fmt.Fprintln(w, "Path: root/image/\n\nTo POST an image:\troot/image/POST/\nTo GET an image:\troot/image/GET/{{imageHash}}\nTo DELETE an image:\troot/image/DELETE/{{imageDeleteHash}}")
+		fmt.Fprintln(w, "Path: root/image/\n\nTo POST an image:\troot/image/\nTo GET an image:\troot/image/{{imageHash}}\nTo DELETE an image:\troot/image/{{imageDeleteHash}}")
 	}
 
 }
@@ -49,46 +49,59 @@ func HandleImage(w http.ResponseWriter, r *http.Request) {
 // TODO : Write more error handling in ImagePOST
 
 // ImagePOST function for posting image
-func ImagePOST(method string, w http.ResponseWriter) {
+func ImagePOST(token string, r *http.Request, w http.ResponseWriter) {
+
+	post := ImagePost{}
+
+	err := json.NewDecoder(r.Body).Decode(&post)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	defer r.Body.Close()
 
 	// URL for POSTing
 	url := "https://api.imgur.com/3/image"
 
 	// Make payload
-	payload := strings.NewReader("https://i.ytimg.com/vi/GUyxqjunVe0/maxresdefault.jpg")
+	payload := strings.NewReader("{\"title\": \"" + post.Title + "\",\"image\": \"" + post.Image + "\"}")
 
 	// Make headers
 	headers := map[string]string{
-		"Authorization": "Bearer " + os.Getenv("TOKEN"),
+		"Authorization": token,
 		"Content-Type":  "application/json",
 	}
 
 	// Get body, but not the status code
-	body, _ := DoStuff(method, url, payload, headers)
+	body, _ := DoStuff(r.Method, url, payload, headers)
 
 	// Print body
 	fmt.Fprintln(w, string(body))
+
 }
 
 // ImageGET function for getting image
-func ImageGET(method string, imageHash string, length int, w http.ResponseWriter) {
+func ImageGET(list []string, client string, r *http.Request, w http.ResponseWriter) {
+	length := len(list) - 1
+	imageHash := list[2]
 
 	// If the length is correct
-	if length == 3 {
+	if length == 2 {
 
 		// If the imageHash isn't blank
 		if imageHash != "" {
 
-			// URL for GETing
+			// URL for GETing image
 			url := "https://api.imgur.com/3/image/" + imageHash
 
 			// Make headers
 			headers := map[string]string{
-				"Authorization": "Client-ID " + os.Getenv("CLIENT"),
+				"Authorization": client,
+				"Content-Type":  "application/json",
 			}
 
 			// Get body and status code
-			body, status := DoStuff(method, url, nil, headers)
+			body, status := DoStuff(r.Method, url, nil, headers)
 
 			// If the status is not OK
 			if status != 200 {
@@ -114,10 +127,13 @@ func ImageGET(method string, imageHash string, length int, w http.ResponseWriter
 }
 
 // ImageDELETE function for deleting image
-func ImageDELETE(method string, imageDeleteHash string, length int, w http.ResponseWriter) {
+func ImageDELETE(list []string, token string, r *http.Request, w http.ResponseWriter) {
+
+	length := len(list) - 1
+	imageDeleteHash := list[2]
 
 	// If the length is correct
-	if length == 3 {
+	if length == 2 {
 
 		// If the imageDeleteHash isn't blank
 		if imageDeleteHash != "" {
@@ -127,11 +143,11 @@ func ImageDELETE(method string, imageDeleteHash string, length int, w http.Respo
 
 			// Make headers
 			headers := map[string]string{
-				"Authorization": "Bearer " + os.Getenv("TOKEN"),
+				"Authorization": token,
 			}
 
 			// Get status code, but not body
-			_, status := DoStuff(method, url, nil, headers)
+			_, status := DoStuff(r.Method, url, nil, headers)
 
 			// If the status code is not OK
 			if status != 200 {
